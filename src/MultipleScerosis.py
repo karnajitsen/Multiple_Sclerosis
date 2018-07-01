@@ -17,7 +17,6 @@ def main():
     dfAU = df[df.participantCountryOfResidence == "AU"]
     #grp = df.groupby()
     
-    tmn = dfUS.testMetricName.unique()
     dfUSControl = dfUS[dfUS.participantIsControl == True].copy()
     dfUSTreated = dfUS[dfUS.participantIsControl == False].copy()
     dfUSControl.drop(columns = ['testResultMetricId', 'testResultMetricCreatedOn'], inplace = True)
