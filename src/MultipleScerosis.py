@@ -10,6 +10,8 @@ from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn import tree
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.decomposition import PCA
+from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
 
 
 def readData(fpath):
@@ -19,12 +21,15 @@ def readData(fpath):
 def main():
     df1 = readData("../data/complete_dataset.csv")
     df2 = readData("../data/complete_dataset2.csv")
-    df = pd.concat([df1,df2])
+    df3 = readData("../data/complete_dataset3.csv")
+    df = df3.copy() #pd.concat([df1,df2])
     testNames = np.unique(df.testName)
     dfUS = df[df.participantCountryOfResidence == "US"]
     dfGB = df[df.participantCountryOfResidence == "GB"]
     dfAU = df[df.participantCountryOfResidence == "AU"]
     #grp = df.groupby()
+    
+
     
     dfUSControl = dfUS[dfUS.participantIsControl == True].copy()
     dfUSTreated = dfUS[dfUS.participantIsControl == False].copy()
@@ -55,65 +60,89 @@ def main():
     dfUSTreatedTest.insert(0,"id", range(0, len(dfUSTreatedTest)))
     #dfUSTreatedTest["class"] = 1
     #dfUSControlTest["class"] = 2
+       
     clsMS = dfUSTreatedTest.copy()
-    clsNoMS = dfUSControlTest.copy()
-    
+    clsNoMS = dfUSControlTest.copy()    
     clsMS.drop(columns = ["id", "floodlightOpenId"], inplace = True)
     clsNoMS.drop(columns = ["id", "floodlightOpenId"], inplace = True)
     
-    X1 = clsMS.as_matrix()
-    X2 = clsNoMS.as_matrix()
+     #returns a numpy array
+    min_max_scaler = preprocessing.MinMaxScaler()
+    
+    ## Normalizing the data
+    x = clsMS.values
+    x_scaled = min_max_scaler.fit_transform(x)
+    clsMS_scaled = pd.DataFrame(x_scaled)
+    
+    x = clsNoMS.values
+    x_scaled = min_max_scaler.fit_transform(x)
+    clsNoMS_scaled = pd.DataFrame(x_scaled)
+    
+    ## Preparation of train and test data ..   
+    X1 = clsMS_scaled.as_matrix()
+    X2 = clsNoMS_scaled.as_matrix() 
     X = np.concatenate((X1,X2))
-    y1 = np.ones(len(clsMS))
-    y2 = np.ones(len(clsNoMS)) *2
-    y = np.concatenate((y1,y2))
-    pca1 = PCA(n_components = 2).fit(X1)
-    pca2 = PCA(n_components = 2).fit(X2)
+    y1 = np.zeros(len(clsMS))
+    y2 = np.ones(len(clsNoMS))
     
-    X1_r = PCA(n_components = 18).fit(X1).transform(X1)
-    X2_r = PCA(n_components = 18).fit(X2).transform(X2)
+    pca = True
+    components = 2
+       
     
-    X_r = np.concatenate((X1_r,X2_r))
-    y1_r = np.ones(len(X1_r))
-    y2_r = np.ones(len(X2_r)) *2
-    y_r = np.concatenate((y1_r,y2_r))
-    X1_r = np.delete(X1_r, 42, 0)  ## outlier
-
-    F = X_r
-    l = y_r   
-    
-    plt.scatter(X1_r[:, 0], X1_r[:, 1], color=colors[0], alpha=.8, lw=lw,label='MS')
-    
-    plt.scatter(X2_r[:, 0], X2_r[:, 1], color=colors[1], alpha=.8, lw=lw,label='No MS')
-
-    
-    
-    #plt.legend(loc='best', shadow=False, scatterpoints=1)
-    #plt.title('Multiple Sclerosis Dataset')
-    
-    
-    
-    #plt.show()
-    
-    
+    if not pca:
+    ## Without PCA
+        X1_train, X1_test, y1_train, y1_test = train_test_split(X1, y1, test_size=0.1, random_state=42)
+        X2_train, X2_test, y2_train, y2_test = train_test_split(X2, y2, test_size=0.1, random_state=42) 
+        X_train = np.concatenate((X1_train,X2_train))
+        y_train = np.concatenate((y1_train,y2_train))
+        
+        X_test = np.concatenate((X1_test,X2_test))
+        y_test = np.concatenate((y1_test,y2_test)) 
+        
+        ## Without PCA
+        F_train = X_train
+        l_train = y_train
+        
+        F_test = X_test
+        l_test = y_test
+        
+    if pca:        
+        ## With PCA
+        X1_r = PCA(n_components = components).fit(X1).transform(X1)
+        X2_r = PCA(n_components = components).fit(X2).transform(X2)
+        X1_train, X1_test, y1_train, y1_test = train_test_split(X1_r, y1, test_size=0.1, random_state=42)
+        X2_train, X2_test, y2_train, y2_test = train_test_split(X2_r, y2, test_size=0.1, random_state=42)
+        
+        X_r = np.concatenate((X1_train,X2_train))
+        y1_r = np.zeros(len(X1_train))
+        y2_r = np.ones(len(X2_train))
+        y_r = np.concatenate((y1_train,y2_train))
+        X1_r = np.delete(X1_train, 42, 0)  ## outlier
+        
+        ## With PCA
+        F_train = X_r
+        l_train = y_r
+        
+        ## With PCA
+        F_test = X_test_r
+        l_test = y_test_r   
     
     fitmodel(X,y)
 
 def fitmodel(F, l):
     qda = QuadraticDiscriminantAnalysis()
-    qmod= qda.fit(F,l)    
-    qmod.predict(F)
+    qmod= qda.fit(F_train,l_train)    
+    qmod.predict(X1_test)
+    qmod.predict(X2_test)
     
-    dtree = tree.DecisionTreeClassifier().fit(F,l)
-    dtree.predict(F)
+    dtree = tree.DecisionTreeClassifier().fit(F_train,l_train)
+    dtree.predict(X1_test)
+    dtree.predict(X2_test)
     
-    rdc = RandomForestClassifier().fit(F,l)
-    rdc.predict(F)
-    
-    
-    
-
-    
+    rdc = RandomForestClassifier().fit(F_train,l_train)
+    rdc.predict(X1_test)
+    rdc.predict(X2_test)
+        
     
 def plotFeatures(df1, df2, xaxis = "", featurenames = [""]):
     
