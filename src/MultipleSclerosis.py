@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Aug 11 12:14:53 2018
+
+@author: SenKa
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -85,6 +92,15 @@ def main():
     y1 = np.zeros(len(clsMS))
     y2 = np.ones(len(clsNoMS))
     
+    ## No scaling 
+    
+    X1 = clsMS.as_matrix()
+    X2 = clsNoMS.as_matrix() 
+    X = np.concatenate((X1,X2))
+    y1 = np.zeros(len(clsMS))
+    y2 = np.ones(len(clsNoMS))
+    
+    
     pca = True
     components = 2
        
@@ -123,10 +139,7 @@ def main():
         F_train = X_r
         l_train = y_r
         
-        ## With PCA
-        F_test = X_test_r
-        l_test = y_test_r   
-    
+   
     fitmodel(X,y)
 
 def fitmodel(F, l):
