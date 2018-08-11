@@ -1,2 +1,2 @@
 # Multiple Sclerosis
-This project predict Multiple Sclerosis disease from Roche data
+This project attempt to analyse/predict Multiple Sclerosis disease from Roche data
